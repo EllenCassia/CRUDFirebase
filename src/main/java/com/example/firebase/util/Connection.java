@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.*;
+import org.springframework.stereotype.Repository;
 
 import javax.annotation.PostConstruct;
 import java.io.FileInputStream;
@@ -11,11 +12,8 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+@Repository
 public class Connection {
-
-    public Connection() {
-        initializeFirebase();
-    }
 
     @PostConstruct
     private void initializeFirebase() {
@@ -27,6 +25,7 @@ public class Connection {
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .setDatabaseUrl("https://bdii-firebase-default-rtdb.firebaseio.com")
                     .build();
+
             FirebaseApp.initializeApp(options);
 
         } catch (IOException e) {
@@ -55,27 +54,27 @@ public class Connection {
         }
     }
 
-    public static void retrieveData(String key) {
+    public User returnUser(String key) {
         DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference().child("users").child(key);
+        User user = null;
         databaseRef.addListenerForSingleValueEvent(new ValueEventListener() {
-
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    String data = dataSnapshot.getValue().toString();
-                    System.out.println("Dados do usuário: " + data);
-                } else {
-                    System.out.println("O dado não existe no Firebase");
+                    // Converte o DataSnapshot para o objeto User
+                    user = dataSnapshot.getValue(User.class);
                 }
             }
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                System.out.println("Erro ao recuperar dados: " + databaseError.getMessage());
+                // Lida com exceção, se ocorrer algum erro durante a recuperação dos dados
+                databaseError.toException().printStackTrace();
             }
         });
+        return user;
     }
 
-    public static void deleteData(String key) {
+    public void deleteUser(String key) {
         DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference().child("users").child(key);
 
         databaseRef.removeValue(new DatabaseReference.CompletionListener() {
@@ -88,8 +87,5 @@ public class Connection {
                 }
             }
         });
-    }
-
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
     }
 }
